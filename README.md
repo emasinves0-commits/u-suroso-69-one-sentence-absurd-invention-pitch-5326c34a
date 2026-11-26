@@ -1,24 +1,31 @@
-# One-Sentence Absurd Invention Pitch
+# The Chewing Plate
+
+One-sentence absurd invention pitch for the [make.fun bounty](https://make.fun/bounty/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a).
+
+## The pitch
+
+> A dinner plate that replays your chewing back into your ears on a three-second delay until you learn to chew with your mouth closed.
+
+(132 characters, one sentence.)
+
+The joke is the mechanism itself: delayed auditory feedback is a real
+self-correction trick — hearing your own chewing three seconds late is so
+unnerving that you retrain yourself mid-meal. The plate does not shame you,
+fine you, or compensate anyone after the fact. It ends the annoyance by
+making the chewer hear exactly what everyone else at the table hears.
+
+## How to run
+
+```sh
+node main.ts              # writes the pitch to /output/entry.txt
+node main.ts --self-test  # validates the pitch and the guards
+```
+
+Node 22+, no dependencies. `main.ts` checks the pitch before writing: it
+must be non-blank, at most 220 characters, a single line, and exactly one
+sentence ending with a single period. After writing, it reads the file back
+and refuses to finish if the content differs.
 
 [![make.fun](https://make.fun/badge/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a.svg)](https://make.fun/bounty/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a)
 [![rank](https://make.fun/badge/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a/emasinves0-commits/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a/rank.svg)](https://make.fun/bounty/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a)
 [![reward](https://make.fun/badge/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a/emasinves0-commits/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a/reward.svg)](https://make.fun/bounty/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a)
-
-Bounty: <https://make.fun/bounty/u-suroso-69-one-sentence-absurd-invention-pitch-5326c34a>
-
-## The pitch
-
-> A car alarm that invoices the pigeon $0.25 per false alarm, payable in feathers, and spends the feathers stuffing a tiny pillow for the neighbour it woke.
-
-A car alarm that bills the pigeon that set it off. Every false alarm costs the bird $0.25, paid in feathers, and the alarm then spends those feathers stuffing a tiny pillow for the neighbour it just woke up.
-
-The joke is the invention itself: invoicing a pigeon, and accepting feathers as legal tender. It is also a complete absurd economy. There is a cause (the pigeon trips the alarm), a punishment (the invoice) and restitution (the feathers go to the exact person who lost sleep).
-
-## Run
-
-```sh
-node main.ts              # writes the pitch to /output/entry.txt
-node main.ts --self-test  # checks the validation rules and a temp-dir round trip
-```
-
-The entry is 154 characters, written as UTF-8 with no trailing newline. `main.ts` refuses to write anything that is blank, over 220 characters, multi-line, or not exactly one sentence.
