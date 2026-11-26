@@ -1,150 +1,120 @@
-// One-Sentence Absurd Invention Pitch — make.fun entry (v2)
+// One-Sentence Absurd Invention Pitch — v3 entry ("The Chewing Plate").
 //
-// THE INVENTION: a car alarm that invoices the pigeon that set it off
-// $0.25 per false alarm, payable in feathers, and spends the feathers
-// stuffing a tiny pillow for the neighbour it woke.
+// The program writes a single absurd-invention pitch to /output/entry.txt.
+// The pitch: a dinner plate that cures loud chewing by looping the chewer's
+// own chewing back into their ears on a three-second delay — delayed
+// auditory feedback, a real self-correction trick, turned into tableware.
+// The annoyance actually ends: the chewer retrains themself, mid-meal.
 //
-// Usage:
-//   node main.ts              write the entry to /output/entry.txt
-//   node main.ts --self-test  run the built-in checks (no /output write)
+// Run:  node main.ts            (writes /output/entry.txt)
+//       node main.ts --self-test (validates the pitch + the guards, no output file)
 
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-export const ENTRY =
-  "A car alarm that invoices the pigeon $0.25 per false alarm, payable in feathers, and spends the feathers stuffing a tiny pillow for the neighbour it woke.";
+const PITCH =
+  "A dinner plate that replays your chewing back into your ears on a three-second delay until you learn to chew with your mouth closed.";
+const MAX_CHARS = 220;
+const OUT_PATH = "/output/entry.txt";
 
-export const MAX_ENTRY_LENGTH = 220;
+// --- guards: each names one rule the pitch must satisfy ---
 
-const OUTPUT_PATH = "/output/entry.txt";
-
-/** Throws a descriptive Error unless `text` is a valid one-sentence entry. */
-export function validateEntry(text: string): void {
+function failIfBlank(text: string): void {
   if (text.trim().length === 0) {
     throw new Error("entry is blank");
   }
-  if (text.length > MAX_ENTRY_LENGTH) {
-    const excess = text.length - MAX_ENTRY_LENGTH;
+}
+
+function failIfTooLong(text: string): void {
+  if (text.length > MAX_CHARS) {
     throw new Error(
-      `entry is ${text.length} characters, ${excess} over the ${MAX_ENTRY_LENGTH} limit`,
-    );
-  }
-  if (/[\r\n]/.test(text)) {
-    throw new Error("entry must be a single line (found a newline)");
-  }
-  // A period between two digits (the "." in "$0.25") is a decimal point,
-  // not a sentence terminator, so it is not counted.
-  const periods = (text.match(/(?<!\d)\.|\.(?!\d)/g) ?? []).length;
-  if (periods !== 1 || !text.endsWith(".")) {
-    throw new Error(
-      `entry must be exactly one sentence: one period, as the final character (found ${periods})`,
+      `entry is ${text.length} characters, over the ${MAX_CHARS}-character limit`,
     );
   }
 }
 
-/**
- * Validates, then writes `text` to `path` as UTF-8 with no trailing newline.
- * The write goes to a temp file first and is renamed into place, so `path`
- * never holds a half-written entry; the result is read back and compared.
- */
-export function writeEntry(text: string, path: string): void {
-  validateEntry(text);
-  mkdirSync(dirname(path), { recursive: true });
-  const tmp = `${path}.tmp-${process.pid}`;
-  writeFileSync(tmp, text, "utf8");
-  renameSync(tmp, path);
-  if (readFileSync(path, "utf8") !== text) {
-    throw new Error(`read-back of ${path} does not match the entry`);
+function failIfMultiline(text: string): void {
+  if (text.includes("\n") || text.includes("\r")) {
+    throw new Error("entry must be a single line");
   }
 }
 
-function rejects(label: string, text: string): string | null {
+function failIfNotOneSentence(text: string): void {
+  const stops = [...text].filter((ch) => ch === ".").length;
+  if (stops !== 1 || !text.endsWith(".")) {
+    throw new Error(
+      `entry must be exactly one sentence ending with a single period (found ${stops} periods)`,
+    );
+  }
+}
+
+function checkPitch(text: string): void {
+  failIfBlank(text);
+  failIfTooLong(text);
+  failIfMultiline(text);
+  failIfNotOneSentence(text);
+}
+
+function writePitch(outPath: string): void {
+  checkPitch(PITCH);
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, PITCH, "utf8");
+  // Read back: a partial or altered write must fail loudly, never silently.
+  const back = readFileSync(outPath, "utf8");
+  if (back !== PITCH) {
+    throw new Error(`wrote ${outPath} but read back different content`);
+  }
+}
+
+// --- self-test: every guard must reject its bad input, and the real pitch
+// must survive a byte-identical round-trip through a temp directory ---
+
+function expectReject(label: string, text: string): void {
   try {
-    validateEntry(text);
+    checkPitch(text);
   } catch {
-    return null;
+    return;
   }
-  return `${label}: expected rejection but it was accepted`;
+  throw new Error(`self-test failed: ${label} was accepted`);
 }
 
-function accepts(label: string, text: string): string | null {
+function selfTest(): void {
+  checkPitch(PITCH);
+  expectReject("blank entry", "   ");
+  expectReject("over-limit entry", "x".repeat(MAX_CHARS + 1));
+  expectReject("two sentences", "First sentence. Second sentence.");
+  expectReject("no final period", "A sentence with no stop");
+  expectReject("newline inside", "One line\ntwo lines.");
+  // 220 characters exactly is the boundary: accepted.
+  checkPitch("a".repeat(MAX_CHARS - 1) + ".");
+  // Round-trip: write to a temp dir, read back, compare byte for byte.
+  const dir = mkdtempSync(join(tmpdir(), "chewing-plate-"));
   try {
-    validateEntry(text);
-  } catch (err) {
-    return `${label}: expected acceptance but got "${(err as Error).message}"`;
-  }
-  return null;
-}
-
-function messageHas(label: string, text: string, expected: string): string | null {
-  try {
-    validateEntry(text);
-  } catch (err) {
-    return (err as Error).message.includes(expected)
-      ? null
-      : `${label}: message "${(err as Error).message}" lacks "${expected}"`;
-  }
-  return `${label}: expected rejection but it was accepted`;
-}
-
-function selfTest(): number {
-  const filler = (n: number) => "a".repeat(n - 1) + ".";
-  const checks: Array<string | null> = [
-    rejects("empty string", ""),
-    rejects("whitespace only", "   \t "),
-    rejects("newline inside", "A first half.\nA second half."),
-    rejects("trailing newline", "A tidy sentence.\n"),
-    rejects("two sentences", "One idea. Another idea."),
-    rejects("no final period", "A sentence with no ending"),
-    rejects("period not last", "A sentence. with a stray period inside"),
-    rejects("two sentences with a decimal", "It costs $0.25. Then it stops."),
-    accepts("decimal point is not a terminator", "It costs $0.25 and then stops."),
-    accepts("exactly 220 chars", filler(MAX_ENTRY_LENGTH)),
-    rejects("221 chars", filler(MAX_ENTRY_LENGTH + 1)),
-    messageHas("excess is reported", filler(MAX_ENTRY_LENGTH + 5), "5 over the 220 limit"),
-    messageHas("blank is named", " ", "blank"),
-    accepts("the real entry", ENTRY),
-  ];
-
-  const dir = mkdtempSync(join(tmpdir(), "pitch-selftest-"));
-  try {
-    const target = join(dir, "nested", "entry.txt");
-    writeEntry(ENTRY, target);
-    const roundTrip = readFileSync(target, "utf8");
-    checks.push(
-      roundTrip === ENTRY ? null : "round trip: file differs from the entry",
-      Buffer.byteLength(ENTRY, "utf8") === ENTRY.length
-        ? null
-        : "entry is not pure single-byte text",
-    );
+    const probe = join(dir, "entry.txt");
+    writePitch(probe);
+    const back = readFileSync(probe, "utf8");
+    if (back !== PITCH) {
+      throw new Error("self-test failed: round-trip changed the entry");
+    }
+    if (Buffer.byteLength(back, "utf8") !== PITCH.length) {
+      throw new Error("self-test failed: round-trip changed the byte length");
+    }
+    // Determinism: a second write must produce identical bytes.
+    const probe2 = join(dir, "entry2.txt");
+    writePitch(probe2);
+    if (readFileSync(probe2, "utf8") !== back) {
+      throw new Error("self-test failed: second write differs from the first");
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-
-  const failures = checks.filter((c): c is string => c !== null);
-  for (const f of failures) console.error(`FAIL ${f}`);
-  console.log(
-    failures.length === 0
-      ? `self-test passed (${checks.length} checks)`
-      : `self-test failed (${failures.length} of ${checks.length})`,
-  );
-  return failures.length === 0 ? 0 : 1;
+  console.log(`self-test ok: ${PITCH.length} characters, 1 sentence`);
 }
 
-function main(): void {
-  if (process.argv.includes("--self-test")) {
-    process.exit(selfTest());
-  }
-  writeEntry(ENTRY, OUTPUT_PATH);
-  console.log(`Wrote ${ENTRY.length} characters to ${OUTPUT_PATH}`);
+if (process.argv.includes("--self-test")) {
+  selfTest();
+} else {
+  writePitch(OUT_PATH);
+  console.log(`wrote ${PITCH.length} characters to ${OUT_PATH}`);
 }
-
-main();
